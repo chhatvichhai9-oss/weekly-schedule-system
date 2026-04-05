@@ -216,7 +216,8 @@
                     <input type="text" id="directorName" placeholder="ឈ្មោះនាយក" oninput="saveMetaData()" style="width: 80px; font-size: 11px;border: 1px solid #e74c3c;">
                     <input type="text" id="chanDate" placeholder="ថ្ងៃចន្ទគតិ..." oninput="saveMetaData()" style="width: 300px; font-size: 12px;border: 1px solid #e74c3c;">
                     <input type="text" id="soriyaDate" placeholder="ថ្ងៃសូរិយគតិ..." oninput="saveMetaData()" style="width: 215px; font-size: 12px;border: 1px solid #e74c3c;">
-                
+                    <label style="font-size: 12px; color: #0b08c6; font-family: 'Khmer OS Content';">ជ្រើសរើសក្នុងប្រតិទិនថ្ងៃចាប់ផ្តើម </label><label style="font-size: 11px; color: #d60b0b; font-family: 'Khmer OS Content';">(ថ្ងៃចន្ទ) </label><label style="font-size: 12px; color: #0b08c6; font-family: 'Khmer OS Content';">សម្រាប់បញ្ជីវត្ដមានតាមថ្ងៃ៖ </label>
+                    <input type="date" id="startDate" onchange="renderAttendanceTable()" style="font-size: 12px; color: #e74c3c; border: 1px solid #070ac1; border-radius: 3px; padding: 3px;">
                 <div class="school-input-group">
                     
                 </div>
@@ -331,11 +332,10 @@
     const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     const daysKh = ["ចន្ទ", "អង្គារ", "ពុធ", "ព្រហស្បតិ៍", "សុក្រ", "សៅរ៍"];
     // មុខងារចាប់យកកាលបរិច្ឆេទ និងបូកបន្ថែមថ្ងៃទៅតាមថ្ងៃក្នុងសប្ដាហ៍
-function getKhmerDate(offsetDays = 0) {
-    const now = new Date();
+function getKhmerDate(offsetDays = 0 , baseDate = new Date()) {
     // បង្កើតកាលបរិច្ឆេទថ្មីដោយយោងតាមថ្ងៃបច្ចុប្បន្ន + ចំនួនថ្ងៃបន្ថែម
-    const targetDate = new Date(now);
-    targetDate.setDate(now.getDate() + offsetDays);
+    const targetDate = new Date(baseDate);
+    targetDate.setDate(baseDate.getDate() + offsetDays);
 
     const daysKh = ["អាទិត្យ", "ចន្ទ", "អង្គារ", "ពុធ", "ព្រហស្បតិ៍", "សុក្រ", "សៅរ៍"];
     const monthsKh = ["មករា", "កុម្ភៈ", "មីនា", "មេសា", "ឧសភា", "មិថុនា", "កក្កដា", "សីហា", "កញ្ញា", "តុលា", "វិច្ឆិកា", "ធ្នូ"];
@@ -573,8 +573,9 @@ function renderMasterSchedule() {
     function renderAttendanceTable() {
         const container = document.getElementById('all-days-attendance-container');
         container.innerHTML = "";
-        const now = new Date();
-        const currentDayIndex = now.getDay(); // 0 = អាទិត្យ, 1 = ចន្ទ...
+        const dateInput = document.getElementById('startDate').value; 
+        const baseDate = dateInput ? new Date(dateInput) : new Date();
+        const startDayIndex = baseDate.getDay();
         const teachers = [...new Set(entries.map(e => e.name))];
         if (teachers.length === 0) return;
         const dirName = document.getElementById('directorName').value || "............................";
@@ -582,11 +583,11 @@ function renderMasterSchedule() {
         const soriya = document.getElementById('soriyaDate').value || "";
         // សម្រាប់គ្រប់ថ្ងៃ បង្ហាញតារាងវត្តមានសម្រាប់គ្រូទាំងអស់ និងម៉ោងបង្រៀននៅពេលណាខ្លះក្នុងមួយសប្តាហ៍
         days.forEach((day, index) => {
-            // គណនាគម្លាតថ្ងៃ (ឧទាហរណ៍៖ បើថ្ងៃនេះថ្ងៃចន្ទ(1) ហើយចង់បង្ហាញថ្ងៃពុធ(3) គឺត្រូវបូក 2 ថ្ងៃ)
-        const dayInWeekIndex = index + 1; // ចន្ទ=1, អង្គារ=2...
-        const offset = dayInWeekIndex - currentDayIndex;
+        // គណនាគម្លាតថ្ងៃ (ឧទាហរណ៍៖ បើថ្ងៃនេះថ្ងៃចន្ទ(1) ហើយចង់បង្ហាញថ្ងៃពុធ(3) គឺត្រូវបូក 2 ថ្ងៃ)
+        const targetDayInWeek = index + 1; // ចន្ទ=1, អង្គារ=2...
+        const offset = targetDayInWeek - startDayIndex;
         
-        const kDate = getKhmerDate(offset); // ហៅកាលបរិច្ឆេទដែលបានគណនារួច
+        const kDate = getKhmerDate(offset, baseDate); // ហៅកាលបរិច្ឆេទដែលបានគណនារួច
             
             const daySection = document.createElement('div');
             daySection.className = "attendance-section";
@@ -672,7 +673,6 @@ function renderMasterSchedule() {
         const container = document.getElementById('classes-matrix-container');
         container.innerHTML = "";
         const filteredEntries = entries.filter(e => e.role.includes("គ្រូ"));
-        //const uniqueClasses = [...new Set(entries.map(e => e.className))].sort();
         const uniqueClasses = [...new Set(filteredEntries.map(e => e.className))].sort();
         const chan = document.getElementById('chanDate').value;
         const soriya = document.getElementById('soriyaDate').value;
@@ -680,7 +680,6 @@ function renderMasterSchedule() {
         const schName = document.getElementById('schoolName').value;
         // សម្រាប់គ្រប់ថ្នាក់ បង្ហាញម៉ោងបង្រៀននៅពេលណាខ្លះក្នុងមួយសប្តាហ៍ និងសង្ខេបសម្រាប់បង្ហាញសរុបម៉ោងបង្រៀនសម្រាប់គ្រូទាំងអស់ និងមុខវិជ្ជាដែលគ្រូនីមួយៗបានបង្រៀន
         uniqueClasses.forEach(cName => {
-            //const classEntries = entries.filter(e => e.className === cName);
             const classEntries = filteredEntries.filter(e => e.className === cName);
             const classDiv = document.createElement('div'); classDiv.className = "class-group";
             let html = `<div class="header-top"><div class="school-side"><div style="font-family:'Khmer OS Muol Light'; font-size:13px; color:var(--main-color)">${schName}</div></div><div class="nation-side"><div class="nation-title">ព្រះរាជាណាចក្រកម្ពុជា</div><div class="nation-motto">ជាតិ សាសនា ព្រះមហាក្សត្រ</div></div></div><div class="class-title">កាលវិភាគថ្នាក់ទី៖ ${cName}</div><table class="matrix-table"><thead><tr><th style="width:90px;">ម៉ោង</th>`;
