@@ -266,6 +266,21 @@
                 <option value="15:00 - 16:00">15:00 - 16:00</option><option value="16:00 - 17:00">16:00 - 17:00</option>
             </select>
             <input type="text" id="classInput" placeholder="ថ្នាក់៖ឧ.៩ក.១២A">
+            <select id="blockHours">
+    <option value="1">១ ម៉ោងផ្សេងគ្នា</option>
+    <option value="2">២ ម៉ោងជាប់គ្នា</option>
+</select>
+
+            <input 
+                type="number" 
+                id="hoursInput" 
+                min="1" 
+                max="24" 
+                value=""
+                placeholder="ចំនួនម៉ោង"
+                style="width:70px; border:1px solid #2980b9;"
+            >
+
             <select id="subjectSelect">
                 <option value="ភាសាខ្មែរ(K)">ភាសាខ្មែរ(K)</option><option value="ពលរដ្ឋ(I)">ពលរដ្ឋ(I)</option>
                 <option value="ភូមិវិទ្យា(G)">ភូមិវិទ្យា(G)</option><option value="ប្រវត្តិវិទ្យា(H)">ប្រវត្តិវិទ្យា(H)</option>
@@ -281,8 +296,15 @@
                 <option value="ICT">ICT</option>
                 <option value="ការិយាល័យ">ការិយាល័យ</option>
             </select>
-            <button id="addBtn" style="background-color: #28a745; color: white;" onclick="addEntry()">+ បន្ថែម</button>
-        </div>
+                        <button 
+                type="button"
+                id="autoDivideBtn"
+                style="background-color:#2980b9;color:white;border:none;font-weight:bold;padding:4px 8px;cursor:pointer;"
+                onclick="autoDivideHours()"
+            >
+            ចែកម៉ោងស្វ័យប្រវត្តិ
+            </button>
+            <button id="addBtn" style="background-color: #28a745; color: white;" onclick="addEntry()">+ បន្ថែម</button>        </div>
         
         <div class="tab-container">
             <div class="tab active" onclick="showDay('Monday', this)">ចន្ទ</div>
@@ -404,6 +426,288 @@ function getKhmerDate(offsetDays = 0 , baseDate = new Date()) {
         document.getElementById('schoolName').style.borderColor = sch ? "#bdc3c7" : "#e74c3c";
         renderAll();
     }
+function autoDivideHours() {
+
+    const currentSchool = document.getElementById('schoolName').value;
+
+    if (!currentSchool) {
+        alert("សូមមេត្តាជ្រើសរើស 'ឈ្មោះសាលា' ជាមុនសិន!");
+        document.getElementById('schoolName').focus();
+        return;
+    }
+
+    const name = document.getElementById('teacherName').value.trim();
+    const gender = document.getElementById('genderSelect').value;
+    const phone = document.getElementById('phoneInput').value.trim();
+    const role = document.getElementById('roleInput').value.trim() || "គ្រូបង្រៀន";
+    const cName = document.getElementById('classInput').value.trim();
+    const sub = document.getElementById('subjectSelect').value;
+
+    const hours = parseInt(document.getElementById('hoursInput').value) || 0;
+
+    // ចំនួនម៉ោងក្នុងមួយវគ្គ
+    const blockHours = parseInt(
+        document.getElementById('blockHours').value
+    ) || 1;
+
+    if (!name) {
+        alert("សូមបញ្ចូលឈ្មោះគ្រូជាមុនសិន!");
+        document.getElementById('teacherName').focus();
+        return;
+    }
+
+    if (!cName) {
+        alert("សូមបញ្ចូលថ្នាក់ជាមុនសិន!");
+        document.getElementById('classInput').focus();
+        return;
+    }
+
+    if (!hours || hours < 1) {
+        alert("សូមបញ្ចូលចំនួនម៉ោងយ៉ាងតិច 1 ម៉ោង!");
+        document.getElementById('hoursInput').focus();
+        return;
+    }
+
+    // ត្រូវចែកបានពេញជា ១ ឬ ២ ម៉ោង
+    if (hours % blockHours !== 0) {
+        alert(
+            "⚠️ ចំនួនម៉ោង " + hours + " ម៉ោង មិនអាចចែកជា " +
+            blockHours + " ម៉ោងជាប់គ្នាបានទេ!\n\n" +
+            "សូមបញ្ចូលចំនួនម៉ោងដែលចែកបានពេញ។"
+        );
+        return;
+    }
+
+    // ចំនួនប្លុកដែលត្រូវបង្កើត
+    const numberOfBlocks = hours / blockHours;
+
+    /*
+     * បង្កើតប្លុកម៉ោងជាប់គ្នា
+     *
+     * ឧទាហរណ៍៖
+     * 07:00 - 08:00
+     * 08:00 - 09:00
+     *
+     * = ១ ប្លុក ២ ម៉ោង
+     */
+
+    const availableBlocks = [];
+
+    days.forEach(day => {
+
+        const groups = [
+            morningSlots,
+            afternoonSlots
+        ];
+
+        groups.forEach(group => {
+
+            for (let i = 0; i <= group.length - blockHours; i++) {
+
+                const block = group.slice(i, i + blockHours);
+
+                // ពិនិត្យថាគ្រូទំនេរគ្រប់ម៉ោងក្នុងប្លុក
+                const teacherBusy = block.some(slot =>
+                    entries.some(e =>
+                        e.name.toLowerCase() === name.toLowerCase() &&
+                        e.day === day &&
+                        e.time === slot
+                    )
+                );
+
+                // ពិនិត្យថ្នាក់ទំនេរគ្រប់ម៉ោងក្នុងប្លុក
+                const classBusy = block.some(slot =>
+                    entries.some(e =>
+                        e.className.toLowerCase() === cName.toLowerCase() &&
+                        e.day === day &&
+                        e.time === slot
+                    )
+                );
+
+                // បើគ្រូ និងថ្នាក់ទំនេរទាំងអស់
+                if (!teacherBusy && !classBusy) {
+
+                    availableBlocks.push({
+                        day: day,
+                        slots: block
+                    });
+
+                }
+            }
+
+        });
+
+    });
+
+    if (availableBlocks.length < numberOfBlocks) {
+
+        alert(
+            "⚠️ មិនអាចចែកបាន " + hours + " ម៉ោងទេ!\n\n" +
+            "ត្រូវការ " + numberOfBlocks +
+            " ប្លុក × " + blockHours + " ម៉ោងជាប់គ្នា\n\n" +
+            "ប៉ុន្តែមានប្លុកទំនេរតែ " +
+            availableBlocks.length + " ប្លុកប៉ុណ្ណោះ។"
+        );
+
+        return;
+    }
+
+    /*
+     * ជ្រើសប្លុកតាមថ្ងៃ
+     *
+     * ឧទាហរណ៍ ៦ ម៉ោង + ២ ម៉ោង/ប្លុក
+     *
+     * ចន្ទ 07-09
+     * អង្គារ 07-09
+     * ពុធ 07-09
+     */
+
+    let selectedBlocks = [];
+
+    // ជំហានទី១
+    // ព្យាយាមយក ១ ប្លុកក្នុងមួយថ្ងៃ
+    for (const day of days) {
+
+        if (selectedBlocks.length >= numberOfBlocks) {
+            break;
+        }
+
+        const dayBlocks = availableBlocks.filter(
+            b => b.day === day
+        );
+
+        if (dayBlocks.length > 0) {
+
+            // យកប្លុកដំបូងដែលអាចប្រើបាន
+            selectedBlocks.push(dayBlocks[0]);
+
+        }
+
+    }
+
+    // បើនៅសល់ប្លុក
+    if (selectedBlocks.length < numberOfBlocks) {
+
+        const selectedKeys = new Set(
+            selectedBlocks.map(
+                b => b.day + "|" + b.slots[0]
+            )
+        );
+
+        const remainingBlocks = availableBlocks.filter(
+            b => !selectedKeys.has(
+                b.day + "|" + b.slots[0]
+            )
+        );
+
+        while (
+            selectedBlocks.length < numberOfBlocks &&
+            remainingBlocks.length > 0
+        ) {
+
+            // រាប់ចំនួនប្លុកក្នុងមួយថ្ងៃ
+            const dayCount = {};
+
+            selectedBlocks.forEach(b => {
+                dayCount[b.day] =
+                    (dayCount[b.day] || 0) + 1;
+            });
+
+            remainingBlocks.sort((a, b) => {
+
+                const countA = dayCount[a.day] || 0;
+                const countB = dayCount[b.day] || 0;
+
+                return countA - countB;
+
+            });
+
+            selectedBlocks.push(
+                remainingBlocks.shift()
+            );
+
+        }
+
+    }
+
+    /*
+     * បង្កើត entries
+     *
+     * ប្លុក ២ ម៉ោង
+     * = បង្កើត record ២ ជួរ
+     *
+     * ដើម្បីឱ្យ Master Schedule
+     * និង Matrix របស់លោកគ្រូនៅតែដំណើរការដដែល
+     */
+
+    selectedBlocks.forEach(block => {
+
+        block.slots.forEach((slot, index) => {
+
+            entries.push({
+
+                id: Date.now() +
+                   Math.random() +
+                   index,
+
+                name: name,
+                gender: gender,
+                phone: phone,
+                role: role,
+
+                day: block.day,
+                time: slot,
+
+                className: cName,
+                sub: sub
+
+            });
+
+        });
+
+    });
+
+    // រក្សាទុក
+    localStorage.setItem(
+        'teacherTasks',
+        JSON.stringify(entries)
+    );
+
+    // បង្ហាញឡើងវិញ
+    renderLists();
+    renderAll();
+
+    // លទ្ធផល
+    const resultText = selectedBlocks.map(block => {
+
+        const dayIndex = days.indexOf(block.day);
+
+        return "• " +
+            daysKh[dayIndex] +
+            " : " +
+            block.slots[0].split(" - ")[0] +
+            " - " +
+            block.slots[block.slots.length - 1]
+                .split(" - ")[1];
+
+    }).join("\n");
+
+    alert(
+        "✅ ចែកម៉ោងស្វ័យប្រវត្តិបានជោគជ័យ!\n\n" +
+        "គ្រូ៖ " + name + "\n" +
+        "ថ្នាក់៖ " + cName + "\n" +
+        "មុខវិជ្ជា៖ " + sub + "\n" +
+        "សរុប៖ " + hours + " ម៉ោង\n" +
+        "ប្លុក៖ " + numberOfBlocks +
+        " × " + blockHours + " ម៉ោង\n\n" +
+        "ម៉ោងដែលបានកំណត់៖\n" +
+        resultText
+    );
+
+    // សម្អាតចំនួនម៉ោង
+    document.getElementById('hoursInput').value = 1;
+}
+
     // មុខងារបន្ថែមឬកែសម្រួលការបែងចែកភារកិច្ច
     function addEntry() {
          // មុខងារត្រួតពិនិត្យការជ្រើសរើសឈ្មោះសាលា
@@ -819,11 +1123,21 @@ function importFromExcel(event) {
     }
     // មុខងារសម្រាប់សម្អាតបែបបទបញ្ចូលទិន្នន័យ
     function clearForm() { 
-        document.getElementById('teacherName').value = ""; 
-        document.getElementById('genderSelect').value = "";
-        document.getElementById('phoneInput').value = ""; 
-        document.getElementById('roleInput').value = ""; 
-        document.getElementById('classInput').value = "";
+    document.getElementById('teacherName').value = ""; 
+
+    document.getElementById('genderSelect').value = "";
+
+    document.getElementById('phoneInput').value = ""; 
+
+    document.getElementById('roleInput').value = ""; 
+
+    document.getElementById('classInput').value = "";
+
+    document.getElementById('hoursInput').value = 1;
+
+    document.getElementById('editId').value = "";
+
+    document.getElementById('addBtn').innerText = "+ បន្ថែម";
     }
     // មុខងារសម្រាប់លុបទិន្នន័យទាំងអស់
     function clearAllData() { 
