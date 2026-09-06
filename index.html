@@ -562,74 +562,107 @@ function autoDivideHours() {
      * ពុធ 07-09
      */
 
-    let selectedBlocks = [];
+let selectedBlocks = [];
 
-    // ជំហានទី១
-    // ព្យាយាមយក ១ ប្លុកក្នុងមួយថ្ងៃ
+// ==========================================
+// ១. ពេលព្រឹក៖ ចន្ទ → សៅរ៍
+// ==========================================
+
+for (const day of days) {
+
+    if (selectedBlocks.length >= numberOfBlocks) {
+        break;
+    }
+
+    const dayMorningBlocks = availableBlocks
+        .filter(b =>
+            b.day === day &&
+            morningSlots.includes(b.slots[0])
+        )
+        .sort((a, b) =>
+            morningSlots.indexOf(a.slots[0]) -
+            morningSlots.indexOf(b.slots[0])
+        );
+
+    // យកប្លុកដំបូងដែលទំនេរ
+    if (dayMorningBlocks.length > 0) {
+        selectedBlocks.push(dayMorningBlocks[0]);
+    }
+}
+
+
+// ==========================================
+// ២. បើត្រូវការម៉ោងបន្ថែម → រសៀល
+// ==========================================
+
+if (selectedBlocks.length < numberOfBlocks) {
+
     for (const day of days) {
 
         if (selectedBlocks.length >= numberOfBlocks) {
             break;
         }
 
-        const dayBlocks = availableBlocks.filter(
-            b => b.day === day
-        );
-
-        if (dayBlocks.length > 0) {
-
-            // យកប្លុកដំបូងដែលអាចប្រើបាន
-            selectedBlocks.push(dayBlocks[0]);
-
-        }
-
-    }
-
-    // បើនៅសល់ប្លុក
-    if (selectedBlocks.length < numberOfBlocks) {
-
-        const selectedKeys = new Set(
-            selectedBlocks.map(
-                b => b.day + "|" + b.slots[0]
+        const dayAfternoonBlocks = availableBlocks
+            .filter(b =>
+                b.day === day &&
+                afternoonSlots.includes(b.slots[0])
             )
-        );
-
-        const remainingBlocks = availableBlocks.filter(
-            b => !selectedKeys.has(
-                b.day + "|" + b.slots[0]
-            )
-        );
-
-        while (
-            selectedBlocks.length < numberOfBlocks &&
-            remainingBlocks.length > 0
-        ) {
-
-            // រាប់ចំនួនប្លុកក្នុងមួយថ្ងៃ
-            const dayCount = {};
-
-            selectedBlocks.forEach(b => {
-                dayCount[b.day] =
-                    (dayCount[b.day] || 0) + 1;
-            });
-
-            remainingBlocks.sort((a, b) => {
-
-                const countA = dayCount[a.day] || 0;
-                const countB = dayCount[b.day] || 0;
-
-                return countA - countB;
-
-            });
-
-            selectedBlocks.push(
-                remainingBlocks.shift()
+            .sort((a, b) =>
+                afternoonSlots.indexOf(a.slots[0]) -
+                afternoonSlots.indexOf(b.slots[0])
             );
 
+        // ចាប់ពីម៉ោងដំបូងរបស់រសៀល
+        if (dayAfternoonBlocks.length > 0) {
+            selectedBlocks.push(dayAfternoonBlocks[0]);
         }
-
     }
+}
 
+
+// ==========================================
+// ៣. បើនៅសល់ម៉ោងទៀត
+//    ចូលប្លុកបន្ទាប់របស់ព្រឹក/រសៀល
+// ==========================================
+
+if (selectedBlocks.length < numberOfBlocks) {
+
+    const selectedKeys = new Set(
+        selectedBlocks.map(
+            b => b.day + "|" + b.slots[0]
+        )
+    );
+
+    const remainingBlocks = availableBlocks
+        .filter(b =>
+            !selectedKeys.has(
+                b.day + "|" + b.slots[0]
+            )
+        )
+        .sort((a, b) => {
+
+            const dayA = days.indexOf(a.day);
+            const dayB = days.indexOf(b.day);
+
+            if (dayA !== dayB) {
+                return dayA - dayB;
+            }
+
+            return allSlots.indexOf(a.slots[0]) -
+                   allSlots.indexOf(b.slots[0]);
+        });
+
+    while (
+        selectedBlocks.length < numberOfBlocks &&
+        remainingBlocks.length > 0
+    ) {
+
+        selectedBlocks.push(
+            remainingBlocks.shift()
+        );
+    }
+}
     /*
      * បង្កើត entries
      *
